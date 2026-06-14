@@ -90,14 +90,12 @@ export default async function HomePage() {
                 )}
                 <div className="text-center">
                   <div className="font-[var(--font-display)] text-[2rem] font-semibold text-[var(--navy)] leading-none mb-[3px]">
-                    {num.includes("+") ? (
+                    {num.includes("+") ?
                       <>
                         {num.replace("+", "")}
                         <span className="text-[var(--gold)]">+</span>
                       </>
-                    ) : (
-                      num
-                    )}
+                    : num}
                   </div>
                   <div className="text-[0.65rem] tracking-[0.1em] uppercase text-[var(--text3)]">
                     {lbl}
@@ -216,12 +214,13 @@ export default async function HomePage() {
           {[
             {
               day: "Thứ Hai - Sáu",
-              masses: weekdayMasses.length
-                ? weekdayMasses
-                : [
+              masses:
+                weekdayMasses.length ? weekdayMasses : (
+                  [
                     { hour: 5, min: 0, label: "Lễ Sáng Thường Ngày" },
                     { hour: 17, min: 45, label: "Lễ Chiều Thường Ngày" },
-                  ],
+                  ]
+                ),
             },
             {
               day: "Thứ Bảy",

@@ -11,12 +11,30 @@ export const metadata: Metadata = {
     "Giáo xứ Tân Trang - Nơi Yêu Thương và Hiệp Nhất. Thuộc Giáo Phận Sài Gòn",
 };
 
+// Helper: fetch an toàn, không throw - trả về fallback nếu lỗi
+async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return fallback;
+  }
+}
+
 export default async function HomePage() {
   const [importantRes, newsRes, massRes, announceRes] = await Promise.all([
-    newsApi.getImportant(),
-    newsApi.getAll({ limit: 7 }),
-    massApi.getWeekly(),
-    announcementApi.getActive(),
+    safeFetch(() => newsApi.getImportant(), {
+      success: false,
+      data: undefined,
+    }),
+    safeFetch(() => newsApi.getAll({ limit: 7 }), {
+      success: false,
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 7,
+    }),
+    safeFetch(() => massApi.getWeekly(), { success: false, data: [] }),
+    safeFetch(() => announcementApi.getActive(), { success: false, data: [] }),
   ]);
 
   const important = importantRes.data;
@@ -26,12 +44,57 @@ export default async function HomePage() {
   const weeklyMass = massRes.data ?? [];
   const annoucements = announceRes.data ?? [];
 
+  // Build schedule từ data thực, fallback về mặc định nếu rỗng
   const sundayMasses = weeklyMass
     .filter((m) => m.day_of_week === 0)
+    .sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min));
+  const satMasses = weeklyMass
+    .filter((m) => m.day_of_week === 6)
     .sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min));
   const weekdayMasses = weeklyMass
     .filter((m) => m.day_of_week === 1)
     .sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min));
+
+  const DEFAULT_WEEKDAY = [
+    { hour: 5, min: 0, label: "Lễ sáng" },
+    { hour: 17, min: 45, label: "Lễ Chiều" },
+  ];
+  const DEFAULT_SAT = [
+    { hour: 5, min: 0, label: "Lễ sáng" },
+    { hour: 17, min: 45, label: "Lễ Chiều Thứ 7" },
+  ];
+  const DEFAULT_SUN = [
+    { hour: 5, min: 0, label: "Lễ 1 Chúa Nhật" },
+    { hour: 7, min: 30, label: "Lễ 2 Chúa Nhật" },
+    { hour: 16, min: 0, label: "Lễ 3 Chúa Nhật" },
+    { hour: 17, min: 30, label: "Lễ 4 Chúa Nhật" },
+  ];
+  // Lễ trọng
+  const DEFAULT_FEAST = [
+    { hour: 5, min: 0, label: "Lễ Sáng" },
+    { hour: 17, min: 45, label: "Lễ Chiều" },
+  ];
+
+  const schedCols = [
+    {
+      day: "Thứ hai - sáu",
+      masses: weekdayMasses.length ? weekdayMasses : DEFAULT_WEEKDAY,
+    },
+    {
+      day: "Thứ bảy",
+      masses: satMasses.length ? satMasses : DEFAULT_SAT,
+    },
+    {
+      day: "Chúa nhật",
+      masses: sundayMasses.length ? sundayMasses : DEFAULT_SUN,
+    },
+    {
+      day: "Lễ trọng",
+      masses: DEFAULT_FEAST,
+    },
+  ];
+
+  const hasAnyNews = important || articles.length > 0;
 
   return (
     <>
@@ -40,13 +103,13 @@ export default async function HomePage() {
         {/* Left */}
         <div className="flex flex-col justify-center px-[72px] py-[72px] pr-[64px] relative">
           <div className="flex items-center gap-[10px] mb-6">
-            <div className="w-[26px] h-[1.5px] bg-[linear-gradient(to_right, var(--gold2), var(--gold3))] rounded-[1px]" />
+            <div className="w-[26px] h-[1.5px] bg-[linear-gradient(to_right,var(--gold2),var(--gold3))] rounded-[1px]" />
             <span className="text-[0.68rem] tracking-[0.18em] uppercase font-bold text-[var(--gold)]">
               Chào mừng đến Giáo Xứ Tân Trang
             </span>
           </div>
 
-          <h1 className="font-[var(--font-display)] text-[clamp(2.8rem, 5vw, 4.8rem)] font-normal leading-[1.1] text-[var(--navy)] mb-6">
+          <h1 className="font-[var(--font-display)] text-[clamp(2.8rem,5vw,4.8rem)] font-normal leading-[1.1] text-[var(--navy)] mb-6">
             <em className="italic text-[var(--gold)]">Nơi Yêu</em>
             <br />
             <strong className="font-bold block">
@@ -56,7 +119,7 @@ export default async function HomePage() {
             </strong>
           </h1>
 
-          <div className="w-[52px] h-[1.5px] bg-[linear-gradient(to_right,var(--gold3),transparent)] mb-[22px]" />
+          <div className="w-[52px] h-0.5 bg-[linear-gradient(to_right,var(--gold3),transparent)] mb-[22px]" />
 
           <p className="text-[1.02rem] text-[var(--text2)] max-w-[390px] leading-[1.82] mb-10">
             Giáo xứ Tân Trang đồng hành cùng mọi gia đình trong hành trình đức
@@ -66,7 +129,7 @@ export default async function HomePage() {
           <div className="flex gap-3 flex-wrap">
             <Link
               href="/lich-le"
-              className="inline-flex items-center gap-2 min-h-[44px] px-[26px] bg-[linear-gradient(150deg,var(--navy2),var(--navy))] text-white no-underline font-[var(--font-body)] text-[0.85rem] font-bold tracking-[0.04em] rounded-[24px] shadow-[0_2px_16px_var(--shadow)]"
+              className="inline-flex items-center gap-2 min-h-[44px] px-[26px] bg-[linear-gradient(150deg,var(--navy2),var(--navy))] text-black no-underline font-[var(--font-body)] text-[0.85rem] font-bold tracking-[0.04em] rounded-[24px] shadow-[0_2px_16px_var(--shadow)]"
             >
               Xem Lịch Thánh Lễ →
             </Link>
@@ -213,47 +276,30 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-4 gap-[1px] max-w-[960px] mx-auto bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[24px] overflow-hidden">
-          {[
-            {
-              day: "Thứ Hai - Sáu",
-              masses: weekdayMasses.length
-                ? weekdayMasses
-                : [
-                    { hour: 5, min: 0, label: "Lễ Sáng Thường Ngày" },
-                    { hour: 17, min: 45, label: "Lễ Chiều Thường Ngày" },
-                  ],
-            },
-            {
-              day: "Thứ Bảy",
-              masses: weekdayMasses
-                .filter((m) => m.day_of_week === 6)
-                .sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min)),
-            },
-            {
-              day: "Chúa Nhật",
-              masses: [
-                { hour: 5, min: 0, label: "Lễ 1 Sáng Chúa Nhật" },
-                { hour: 7, min: 30, label: "Lễ 2 Sáng Chúa Nhật" },
-                { hour: 16, min: 0, label: "Lễ 3 Chiều Chúa Nhật" },
-                { hour: 17, min: 30, label: "Lễ 3 Chiều Chúa Nhật" },
-              ],
-            },
-          ].map(({ day, masses }) => (
+          {schedCols.map(({ day, masses }) => (
             <div
               key={day}
               className="p-[28px_22px] bg-[rgba(255,255,255,0.028)]"
             >
-              <div className="text-[0.63rem] tracking-[0.18em] uppercase text-[rgba(229,184,74,0.85)] font-bold mb-3">
+              <div className="text-[0.63rem] tracking-[0.18rem] uppercase text-[#e5b84a]/85 font-bold mb-3">
                 {day}
               </div>
               {masses.map((m, i) => (
                 <div
                   key={i}
-                  className="font-[var(--font-display)] text-[1.2rem] font-normal text-[rgba(249,246,240,0.92)] mb-2"
+                  className="text-[var(--font-display)] text-[1.2rem] font-bold text-[rgba(249,246,240,0.92)], mb-2"
                 >
                   {fmtMassTime(m.hour, m.min)}
+                  <div className="text-[0.66rem] text-[rgba(255,255,255,0.3)] mt-1">
+                    {m.label}
+                  </div>
                 </div>
               ))}
+              {day === "Lễ trọng" && (
+                <div className="text-[0.64rem] text-[rgba(255,255,255,0.28)] mt-2">
+                  Xem thêm thông báo
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -274,32 +320,53 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {/* Featured */}
-          {important && (
-            <div className="grid grid-cols-[1.8fr_1fr] gap-4 mb-[14px]">
-              <NewsCard article={important} variant="main" />
+          {!hasAnyNews ? (
+            // Empty state - hiển thị placeholder khi chưa có tin
+            <div className="text-center p-[64px_24px] rounded-3xl bg-[var(--card)] border border-[var(--border)] ">
+              <h3 className="text-[var(--font-display)] text-[1.4rem] text-[var(--navy)] mb-2">
+                {" "}
+                Chưa có tin tức nào{" "}
+              </h3>
+              <p className="text-[0.88rem] text-[var(--text2)] mb-6">
+                Vào trang Admin để đăng bài đầu tiên
+              </p>
+              <Link
+                href="/admin/news"
+                className="inline-flex items-center gap-3 p-[10px_24px] rounded-[100px] bg-[linear-gradient(145deg,var(--navy2),var(--navy))] text-white no-underline font-bold text-[0.84rem]"
+              >
+                Vào Admin
+              </Link>
             </div>
+          ) : (
+            <>
+              {/* Featured */}
+              {important && (
+                <div className="grid grid-cols-[1.8fr_1fr] gap-4 mb-[14px]">
+                  <NewsCard article={important} variant="main" />
+                </div>
+              )}
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-7">
+                <div className="flex-1 h-[1px] bg-[linear-gradient(to_right,transparent,var(--border-gold),transparent)]" />
+                <span className="text-[0.66rem] tracking-[0.18em] uppercase text-[var(--gold)] font-bold">
+                  Tin Tức Mới
+                </span>
+                <div className="flex-1 h-[1px] bg-[linear-gradient(to_left,transparent,var(--border-gold),transparent)]" />
+              </div>
+
+              {/* Grid */}
+              <div className="grid grid-cols-3 gap-4">
+                {articles.map((a, i) => (
+                  <NewsCard
+                    key={a.id}
+                    article={a}
+                    variant={i < 3 ? "default" : "small"}
+                  />
+                ))}
+              </div>
+            </>
           )}
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-7">
-            <div className="flex-1 h-[1px] bg-[linear-gradient(to_right,transparent,var(--border-gold),transparent)]" />
-            <span className="text-[0.66rem] tracking-[0.18em] uppercase text-[var(--gold)] font-bold">
-              Tin Tức Mới
-            </span>
-            <div className="flex-1 h-[1px] bg-[linear-gradient(to_left,transparent,var(--border-gold),transparent)]" />
-          </div>
-
-          {/* Grid */}
-          <div className="grid grid-cols-3 gap-4">
-            {articles.map((a, i) => (
-              <NewsCard
-                key={a.id}
-                article={a}
-                variant={i < 3 ? "default" : "small"}
-              />
-            ))}
-          </div>
         </div>
       </section>
 

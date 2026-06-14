@@ -32,8 +32,8 @@ export default function NextMassWidget() {
         {next.label}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="px-3 py-[3px] rounded-full bg-[rgba(200,146,26,0.18)] border border-[rgba(200,146,26,0.35)] text-[0.72rem] font-bold text-[rgba(229,184,74,0.9)]">
+      <div className="flex flex-col items-center gap-2">
+        <span className="px-3 py-[3px] w-full text-center rounded-full bg-[rgba(200,146,26,0.18)] border border-[rgba(200,146,26,0.35)] text-[0.72rem] font-bold text-[rgba(229,184,74,0.9)]">
           {next.dayName}
           {next.isToday ? " (Hôm nay)" : ""}
         </span>

@@ -153,14 +153,12 @@ export default async function HomePage() {
                 )}
                 <div className="text-center">
                   <div className="font-[var(--font-display)] text-[2rem] font-semibold text-[var(--navy)] leading-none mb-[3px]">
-                    {num.includes("+") ? (
+                    {num.includes("+") ?
                       <>
                         {num.replace("+", "")}
                         <span className="text-[var(--gold)]">+</span>
                       </>
-                    ) : (
-                      num
-                    )}
+                    : num}
                   </div>
                   <div className="text-[0.65rem] tracking-[0.1em] uppercase text-[var(--text3)]">
                     {lbl}
@@ -276,7 +274,33 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-4 gap-[1px] max-w-[960px] mx-auto bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] rounded-[24px] overflow-hidden">
-          {schedCols.map(({ day, masses }) => (
+          {[
+            {
+              day: "Thứ Hai - Sáu",
+              masses:
+                weekdayMasses.length ? weekdayMasses : (
+                  [
+                    { hour: 5, min: 0, label: "Lễ Sáng Thường Ngày" },
+                    { hour: 17, min: 45, label: "Lễ Chiều Thường Ngày" },
+                  ]
+                ),
+            },
+            {
+              day: "Thứ Bảy",
+              masses: weekdayMasses
+                .filter((m) => m.day_of_week === 6)
+                .sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min)),
+            },
+            {
+              day: "Chúa Nhật",
+              masses: [
+                { hour: 5, min: 0, label: "Lễ 1 Sáng Chúa Nhật" },
+                { hour: 7, min: 30, label: "Lễ 2 Sáng Chúa Nhật" },
+                { hour: 16, min: 0, label: "Lễ 3 Chiều Chúa Nhật" },
+                { hour: 17, min: 30, label: "Lễ 3 Chiều Chúa Nhật" },
+              ],
+            },
+          ].map(({ day, masses }) => (
             <div
               key={day}
               className="p-[28px_22px] bg-[rgba(255,255,255,0.028)]"
